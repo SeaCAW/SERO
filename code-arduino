@@ -1,0 +1,206 @@
+#include <Servo.h>
+Servo myservo;
+int inputPin=A0;  
+int outputPin=A1;  
+#define Lpwm_pin  5     
+#define Rpwm_pin  6    
+int pinLB=2;            
+int pinLF=4;             
+int pinRB=7;            
+int pinRF=8;            
+unsigned char Lpwm_val = 120; 
+unsigned char Rpwm_val = 120; 
+int Car_state=0;             
+int myangle;                
+int pulsewidth;              
+unsigned char DuoJiao=90;    
+void M_Control_IO_config(void)
+{
+  pinMode(pinLB,OUTPUT); 
+  pinMode(pinLF,OUTPUT); 
+  pinMode(pinRB,OUTPUT); 
+  pinMode(pinRF,OUTPUT);  
+  pinMode(Lpwm_pin,OUTPUT);   
+  pinMode(Rpwm_pin,OUTPUT);   
+}
+void Set_Speed(unsigned char Left,unsigned char Right) 
+{
+  analogWrite(Lpwm_pin,Left);
+  analogWrite(Rpwm_pin,Right);
+}
+void advance()   
+    {
+     digitalWrite(pinRB,LOW);  
+     digitalWrite(pinRF,HIGH);
+     digitalWrite(pinLB,LOW);  
+     digitalWrite(pinLF,HIGH); 
+     Car_state = 1;   
+    }
+void turnR()        
+    {
+     digitalWrite(pinRB,LOW);  
+     digitalWrite(pinRF,HIGH);
+     digitalWrite(pinLB,HIGH);
+     digitalWrite(pinLF,LOW); 
+     Car_state = 4;
+    }
+void turnL()         
+    {
+     digitalWrite(pinRB,HIGH);
+     digitalWrite(pinRF,LOW );   
+     digitalWrite(pinLB,LOW);   
+     digitalWrite(pinLF,HIGH);
+     Car_state = 3;
+    }    
+void stopp()        //stop
+    {
+     digitalWrite(pinRB,HIGH);
+     digitalWrite(pinRF,HIGH);
+     digitalWrite(pinLB,HIGH);
+     digitalWrite(pinLF,HIGH);
+     Car_state = 5;
+    }
+void back()         
+    {
+     digitalWrite(pinRB,HIGH);       
+     digitalWrite(pinRF,LOW);
+     digitalWrite(pinLB,HIGH);  
+     digitalWrite(pinLF,LOW);
+     Car_state = 2;   
+    }
+
+
+
+void Self_Control(void)
+{
+   int H;
+   myservo.write(DuoJiao);
+   H = Ultrasonic_Ranging(1);
+   delay(300);   
+   if(Ultrasonic_Ranging(1) < 15)         
+   {
+       stopp();              
+       delay(100);
+       back();               
+       delay(50);
+    }
+           
+  if(Ultrasonic_Ranging(1) < 30)        
+      {
+        stopp();  
+        delay(100);            
+        myservo.write(0);
+        int L = ask_pin_L(2);
+        delay(300);      
+         myservo.write(180);;
+        int R = ask_pin_R(3);
+        delay(300);      
+
+        if(ask_pin_L(2) > ask_pin_R(3))   
+        {
+         back(); 
+        delay(100);      
+        turnL();
+       delay(400);                  
+       stopp();  
+       delay(50);            
+       myservo.write(DuoJiao);
+       H = Ultrasonic_Ranging(1);
+       delay(500); 
+        }
+        
+      if(ask_pin_L(2)  <= ask_pin_R(3))   
+      {
+       back();  
+       delay(100);  
+       turnR(); 
+       delay(400);   
+       stopp();  
+       delay(50);            
+       myservo.write(DuoJiao);
+       H = Ultrasonic_Ranging(1);
+       delay(300);        
+        }   
+        if (ask_pin_L(2)  < 35 && ask_pin_R(3)< 35)   
+        {
+       stopp();            
+       delay(50);
+       back(); 
+       delay(50);                   
+        }          
+      }
+      else                      
+      {
+      advance();                
+      }                 
+}
+int Ultrasonic_Ranging(unsigned char Mode)
+
+{ 
+  int old_distance;
+  digitalWrite(outputPin, LOW);  
+  delayMicroseconds(2); 
+  digitalWrite(outputPin, HIGH); 
+  delayMicroseconds(10); 
+  digitalWrite(outputPin, LOW);    
+  int distance = pulseIn(inputPin, HIGH);  
+  distance= distance/58;    
+  if(Mode==1){
+         Serial.print("\n H = ");
+         Serial.print(distance,DEC); 
+         return distance;
+  }
+   else  return distance;
+} 
+int ask_pin_L(unsigned char Mode)    
+  { 
+  int old_Ldistance;
+  digitalWrite(outputPin, LOW);  
+  delayMicroseconds(2); 
+  digitalWrite(outputPin, HIGH); 
+  delayMicroseconds(10); 
+  digitalWrite(outputPin, LOW);    
+  int Ldistance = pulseIn(inputPin, HIGH); 
+  Ldistance= Ldistance/58;   // Transform pulse time to distance   
+  if(Mode==2){
+         Serial.print("\n L = ");
+         Serial.print(Ldistance,DEC); 
+         return Ldistance;
+  }
+   else  return Ldistance;
+} 
+int ask_pin_R(unsigned char Mode)   
+   { 
+  int old_Rdistance;
+  digitalWrite(outputPin, LOW);  
+  delayMicroseconds(2); 
+  digitalWrite(outputPin, HIGH); 
+  delayMicroseconds(10); 
+  digitalWrite(outputPin, LOW);    
+  int Rdistance = pulseIn(inputPin, HIGH); 
+  Rdistance= Rdistance/58;      
+  if(Mode==3){
+         Serial.print("\n R = ");
+         Serial.print(Rdistance,DEC); 
+         return Rdistance;
+  }
+   else  return Rdistance;
+} 
+
+void setup() 
+{ 
+   myservo.attach(A2);
+   M_Control_IO_config();     
+   Set_Speed(Lpwm_val,Rpwm_val);  
+   myservo.write(DuoJiao);       
+   pinMode(inputPin, INPUT);      
+   pinMode(outputPin, OUTPUT);    
+   Serial.begin(9600);            
+   stopp();                      
+   delay(1000);
+} 
+void loop() 
+{  
+ 
+        Self_Control();   
+}
